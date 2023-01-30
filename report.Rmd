@@ -1,0 +1,194 @@
+---
+title: "Natural kinds statistical analysis"
+output: html_document
+date: '2022-11-16'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(here)
+library(tidyverse)
+library(sjPlot)
+library(bayestestR)
+library(lme4)
+library(brms)
+mod_m = readRDS(here("models", "multinom_mod.rds"))
+mod_o = readRDS(here("models", "ord_mod.rds"))
+
+df_m = read.csv(here("data", "multinom_data_tidy.csv"))
+
+plot_df = conditional_effects(mod_m, categorical = TRUE)[["kind:cats__"]]
+
+plot_df_o = conditional_effects(mod_o, categorical = TRUE)[["kind:cats__"]]
+
+fixef_df = fixef(mod_m) %>% 
+  as.data.frame() %>% 
+  rownames_to_column("parameter") %>% 
+  mutate(parameter = paste0("b_", parameter))
+
+fixef_df_o = fixef(mod_o) %>% 
+  as.data.frame() %>% 
+  rownames_to_column("parameter") %>% 
+  mutate(parameter = paste0("b_", parameter))
+```
+
+## Overview
+
+I have included below a report of descriptive statistics (with plots and tables) and the results of the Bayesian models. 
+The tables should be easy to copy-paste and you can remove the control conditions if you like. 
+I included 2 options for one of the model outputs (the same information is presented from a different angle).
+I can re-orient any plot, change colors, and take out irrelevant variables for any of these plots easily. 
+I also have a brief explanation of each plot and table below. 
+
+## Statistical Analysis 
+
+Two Bayesian models were run - one ordinal regression and one multinomial regression. 
+The outcome variable of the ordinal model was rating (1-7), while the outcome variable of the multinomial model was the probability of choosing "both", "is" or "is not".
+The fixed and random effect strucutres of both models was the same.
+The sole fixed effect predictor included was "kind" (6 levels).
+The model also included random intercepts for participant and what is labeled "spec" in the data. 
+
+brms syntax for the ordinal model: 
+`rating ~ kind + (1 | prolific_id) + (1 | spec)`
+
+brms syntax for the multinomial model:
+`response ~ kind + (1 | prolific_id) + (1 | spec)`
+The outcome `response` had three levels `both`, `is` or `is_not`.
+
+The predictor `kind` had six levels in the multinomial model: `natural kind`, `abstract. concept`, `artifact`, `control precise definition`,  `control subjective adjective` and `control check`.
+In the ordinal model, `kind` had five of six levels (`control check` was omitted).
+
+The random intercept for `prolific_id` was for participants and there were 51 in the multinomial model and 47 in the ordinal model.
+The random intercept for `spec` was for the specific example used in the experiment and there were 25 unique types in the data for the multinomial model and 22 unique types in the ordinal model.
+
+The models both included the default brms priors - Student’s T distribution with 3 degrees of freedom. The model was run using with 4000 iterations of Hamiltonian Monte-Carlo sampling (1000 warm up), across 4 chains and 8 processing cores.
+
+## Results
+
+### Multinomial Descriptive Statistics 
+
+This is simply a histogram of each response for three of the levels of `kind` that we had discussed in a meeting. 
+
+```{r}
+knitr::include_graphics(here("plots", "multinom_plot_hist.png"))
+```
+
+### Multinomial Model
+
+This plot shows the probability of each choice in the same three conditions according to the output of the Bayesian Model. 
+I do not believe that the overlap here does not actually mean that we would have classically "non-significant" result, since the actual model was in log-odds and this was converted to probability.
+I am working on getting showing this in a better way, but the model outputs have high probabilities of direction and significance (pd and ps).
+
+```{r}
+knitr::include_graphics(here("plots", "multinom_plot.png"))
+```
+
+```{r}
+read.csv(here("data", "tidy", "multinom_table.csv"), check.names = FALSE) %>%
+  select(Kind, both, is, is_not) %>% 
+  knitr::kable(pandoc = TRUE)
+```
+
+### Ordinal Descriptive Statistics 
+
+```{r}
+knitr::include_graphics(here("plots", "ord_hist.png"))
+```
+
+### Ordinal Model 
+
+```{r}
+knitr::include_graphics(here("plots", "ord_model.png"))
+```
+
+### Ordinal Model (option 2)
+
+```{r}
+knitr::include_graphics(here("plots", "ord_model_2.png"))
+```
+
+```{r}
+read.csv(here("data", "tidy", "ord_table.csv"), check.names = FALSE) %>%
+  select(2:8) %>% 
+  knitr::kable(pandoc = TRUE)
+```
+
+
+
+
+
+
+<!--The probability of a correct response in object questions from NT speakers was `r round(plot_df$estimate__[4], digits = 2)` 
+[HDI = `r round(plot_df$lower__[4], digits = 2)` -
+`r round(plot_df$upper__[4], digits = 2)`].
+
+The probability of a correct response in object questions from AUT speakers was  `r round(plot_df$estimate__[3], digits = 2)` 
+[HDI = `r round(plot_df$lower__[3], digits = 2)` -
+`r round(plot_df$upper__[3], digits = 2)`].
+
+The probability of a correct response in subject questions from NT speakers was  `r round(plot_df$estimate__[6], digits = 2)` 
+[HDI = `r round(plot_df$lower__[6], digits = 2)` -
+`r round(plot_df$upper__[6], digits = 2)`].
+
+The probability of a correct response in subject questions from AUT speakers was  `r round(plot_df$estimate__[5], digits = 2)` 
+[HDI = `r round(plot_df$lower__[5], digits = 2)` -
+`r round(plot_df$upper__[5], digits = 2)`].
+
+The probability of a correct response in contrastive focus from NT speakers was `r round(plot_df$estimate__[2], digits = 2)` 
+[HDI = `r round(plot_df$lower__[2], digits = 2)` -
+`r round(plot_df$upper__[2], digits = 2)`],
+
+The probability of a correct response in contrastive focus from AUT speakers was  `r round(plot_df$estimate__[1], digits = 2)` 
+[HDI = `r round(plot_df$lower__[1], digits = 2)` -
+`r round(plot_df$upper__[1], digits = 2)`],-->
+
+
+### Appendix 
+
+Something to note here and possibly include in the body of the paper is our bottom table, the pd (probability of direction) and ps (probability of significance) columns in particular. 
+In each case we see very high probabilities in both cases in all fixed effects and interactions. 
+I take this as good evidence that the effects are in the direction the data says they are and that these differences are not due to noise. 
+
+```{r}
+#knitr::include_graphics(here("docs",                                                        "img", "mcmc_plot.png"))
+```
+## Multinomial Model table 
+```{r}
+tab_model(mod_m)
+```
+## Ordinal Model table 
+```{r}
+tab_model(mod_o)
+```
+
+## Multinomial Model table 
+```{r}
+describe_posterior(
+  mod_m,
+  effects = "fixed",
+  component = "all",
+  test = c("p_direction", "p_significance"),
+  centrality = "all"
+) %>%
+  as.data.frame() %>% 
+  mutate(across(where(is.numeric), round, 3)) %>% 
+  knitr::kable(row.names = FALSE)
+``` 
+
+## Ordinal Model table 
+```{r}
+describe_posterior(
+  mod_o,
+  effects = "fixed",
+  component = "all",
+  test = c("p_direction", "p_significance"),
+  centrality = "all"
+) %>%
+  as.data.frame() %>% 
+  mutate(across(where(is.numeric), round, 3)) %>% 
+  knitr::kable(row.names = FALSE)
+```  
+
+## References 
+
+Bürkner, P. (2017). “brms: An R Package for Bayesian Multilevel Models Using Stan.” *Journal of Statistical Software*, 80(1), 1–28. doi:10.18637/jss.v080.i01.
